@@ -214,10 +214,17 @@ class ExerciseRunner:
         # wait for that to finish. Not sure how to do this better
         sleep(1)
 
+        self.create_mirrorings()
         self.do_net_cli()
+
         # stop right after the CLI is exited
         self.net.stop()
 
+    def create_mirrorings(self):
+        sleep(2)
+        os.system('simple_switch_CLI --thrift-port 9090 < sw1-mirror.txt')
+        os.system('simple_switch_CLI --thrift-port 9091 < sw2-mirror.txt')
+        print("Mirrorings created.")
 
     def parse_links(self, unparsed_links):
         """ Given a list of links descriptions of the form [node1, node2, latency, bandwidth]
