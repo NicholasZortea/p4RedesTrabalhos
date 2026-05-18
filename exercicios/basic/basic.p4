@@ -129,9 +129,7 @@ table ipv4_lpm {
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
-            if(meta.telemetry == 0) {
-                clone_to_port();
-            }
+            clone_to_port();
         }
     }
 }
