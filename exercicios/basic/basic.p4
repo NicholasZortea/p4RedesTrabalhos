@@ -49,6 +49,7 @@ struct metadata {
 header telemetry {
     bit<32> packet_counter;
     bit<32> bytes_counter;
+    bit<32> queue_time;
 }
 
 struct headers {
@@ -110,9 +111,11 @@ control MyIngress(inout headers hdr,
 
     register<bit<32>>(1) packet_counter_reg;
     register<bit<32>>(1) byte_counter_reg;
+    
 
     bit<32> pkt_count;
     bit<32> byte_count;
+    bit<32> queue_time;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -174,6 +177,7 @@ control MyEgress(inout headers hdr,
             hdr.telemetry.setValid();
             hdr.telemetry.packet_counter = meta.pkt_count;
             hdr.telemetry.bytes_counter = meta.byte_count;
+            hdr.telemetry.queue_time = standard_metadata.deq_timedelta;
             hdr.ipv4.dstAddr = HOST3_IP;
     }
     }
