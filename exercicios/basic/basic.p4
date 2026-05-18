@@ -50,6 +50,7 @@ header telemetry {
     bit<32> packet_counter;
     bit<32> bytes_counter;
     bit<32> queue_time;
+    bit<32> jitter;
 }
 
 struct headers {
@@ -115,7 +116,6 @@ control MyIngress(inout headers hdr,
 
     bit<32> pkt_count;
     bit<32> byte_count;
-    bit<32> queue_time;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -172,12 +172,28 @@ table ipv4_lpm {
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
+
+    register<bit<32>>(1) last_queue_time_reg;
+
+    bit<32> previous_queue_time;
+    bit<32> queue_time;
+    bit<32> jitter;
+
     apply { 
         if(standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
             hdr.telemetry.setValid();
             hdr.telemetry.packet_counter = meta.pkt_count;
             hdr.telemetry.bytes_counter = meta.byte_count;
             hdr.telemetry.queue_time = standard_metadata.deq_timedelta;
+            queue_time = standard_metadata.deq_timedelta;
+            last_queue_time_reg.read(previous_queue_time, 0);
+            if(queue_time < previous_queue_time) {
+                jitter = previous_queue_time - queue_time;
+            } else {
+                jitter = queue_time - previous_queue_time;
+            }
+            last_queue_time_reg.write(0, queue_time);
+            hdr.telemetry.jitter = jitter;
             hdr.ipv4.dstAddr = HOST3_IP;
     }
     }
