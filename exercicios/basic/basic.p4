@@ -107,6 +107,9 @@ control MyIngress(inout headers hdr,
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.ethernet.dstAddr = dstAddr;
+        if(hdr.ipv4.dstAddr==HOST3_IP && standard_metadata.instance_type != PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+            drop();
+        }
     }
 
 table ipv4_lpm {
