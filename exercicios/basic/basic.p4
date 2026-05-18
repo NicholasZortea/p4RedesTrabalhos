@@ -40,12 +40,21 @@ header ipv4_t {
 const bit<32> HOST3_IP = 0x0A000303;
 
 struct metadata {
-    bit<1> telemetry;
+    @field_list(1)
+    bit<32> pkt_count;
+    @field_list(1)
+    bit<32> byte_count;
+}
+
+header telemetry {
+    bit<32> packet_counter;
+    bit<32> bytes_counter;
 }
 
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
+    telemetry    telemetry;
 }
 
 /*************************************************************************
@@ -99,6 +108,12 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
+    register<bit<32>>(1) packet_counter_reg;
+    register<bit<32>>(1) byte_counter_reg;
+
+    bit<32> pkt_count;
+    bit<32> byte_count;
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
@@ -126,11 +141,20 @@ table ipv4_lpm {
     }
 
     action clone_to_port() {
-        clone(CloneType.I2E, 100);
+        clone_preserving_field_list(CloneType.I2E, 100, 1);
     }
 
     apply {
         if (hdr.ipv4.isValid()) {
+            packet_counter_reg.read(pkt_count, 0);
+            pkt_count = pkt_count + 1;
+            packet_counter_reg.write(0, pkt_count);
+
+            byte_counter_reg.read(byte_count, 0);
+            byte_count = byte_count + (bit<32>) hdr.ipv4.totalLen;
+            byte_counter_reg.write(0, byte_count);
+            meta.pkt_count = pkt_count;
+            meta.byte_count = byte_count;
             ipv4_lpm.apply();
             clone_to_port();
         }
@@ -147,7 +171,9 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
     apply { 
         if(standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-            meta.telemetry = 1;
+            hdr.telemetry.setValid();
+            hdr.telemetry.packet_counter = meta.pkt_count;
+            hdr.telemetry.bytes_counter = meta.byte_count;
             hdr.ipv4.dstAddr = HOST3_IP;
     }
     }
@@ -189,6 +215,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
         */
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
+        packet.emit(hdr.telemetry);
     }
 }
 
