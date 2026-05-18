@@ -4,6 +4,7 @@
 #include <v1model.p4>
 
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<32> PKT_INSTANCE_TYPE_INGRESS_CLONE = 1;
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -36,9 +37,10 @@ header ipv4_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
 }
+const bit<32> HOST3_IP = 0x0A000303;
 
 struct metadata {
-    /* empty */
+    bit<1> telemetry;
 }
 
 struct headers {
@@ -101,44 +103,13 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    /*********************************************************************
-     * NOTE FOR NEW READERS:
-     * 'ipv4_forward(dstAddr, port)' is invoked by table 'ipv4_lpm'.
-     *
-     * The values for 'dstAddr' and 'port' are *action data* supplied by
-     * the control plane when it installs entries in 'ipv4_lpm'.
-     *
-     * They mean:
-     *   - dstAddr  => Ethernet destination MAC for the next hop
-     *   - port     => output port (ultimately written to standard_metadata.egress_spec)
-     *
-     * Example (BMv2 simple_switch_CLI):
-     *   table_add ipv4_lpm ipv4_forward 10.0.1.1/32 => 00:00:00:00:01:00 1
-     * which passes MAC=00:00:00:00:01:00 and PORT=1 as action parameters
-     * into ipv4_forward(dstAddr, port).
-     *********************************************************************/
-    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        /*
-            Action function for forwarding IPv4 packets.
-
-            TODO: Implement the forwarding steps, for example:
-              - standard_metadata.egress_spec = port;
-              - hdr.ethernet.dstAddr = dstAddr;
-              - (optionally) set hdr.ethernet.srcAddr to the switch MAC for 'port'
-              - adjust IPv4 TTL and checksums as needed
-        */
+   action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.ethernet.dstAddr = dstAddr;
     }
 
-    /*********************************************************************
-     * LPM table for IPv4:
-     *   - Matches on hdr.ipv4.dstAddr using longest-prefix match (lpm)
-     *   - On hit, calls ipv4_forward with *action data* populated by the
-     *     control plane when it installs the table entry.
-     *********************************************************************/
-    table ipv4_lpm {
+table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
@@ -151,13 +122,17 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
+    action clone_to_port() {
+        clone(CloneType.I2E, 100);
+    }
+
     apply {
-        /* TODO: fix ingress control logic
-         *  - Good practice: apply ipv4_lpm only when the IPv4 header is valid, e.g.:
-         *      if (hdr.ipv4.isValid()) { ipv4_lpm.apply(); }
-         *    This skeleton currently applies unconditionally for the exercise.
-         */
-         if (hdr.ipv4.isValid()) { ipv4_lpm.apply(); }
+        if (hdr.ipv4.isValid()) {
+            ipv4_lpm.apply();
+            if(meta.telemetry == 0) {
+                clone_to_port();
+            }
+        }
     }
 }
 
@@ -169,13 +144,13 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    apply {  }
+    apply { 
+        if(standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+            meta.telemetry = 1;
+            hdr.ipv4.dstAddr = HOST3_IP;
+    }
+    }
 }
-
-/*************************************************************************
-*************   C H E C K S U M    C O M P U T A T I O N   **************
-* This block shows how to compute IPv4 header checksum when needed.      *
-*************************************************************************/
 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
      apply {
