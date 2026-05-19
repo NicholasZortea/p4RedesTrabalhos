@@ -155,7 +155,7 @@ table ipv4_lpm {
         default_action = NoAction();
     }
 
-    action clone() {
+    action clone_packet() {
         clone_preserving_field_list(CloneType.I2E, 100, 1);
     }
 
@@ -212,7 +212,7 @@ table ipv4_lpm {
             amount_of_packets_to_clone.write(0, threshold);
 
             if(clone_pkt >= threshold) {
-                clone();
+                clone_packet();
                 clone_pkt = 0;
             }
             clone_counter.write(0, clone_pkt);
