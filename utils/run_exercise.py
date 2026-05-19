@@ -215,10 +215,25 @@ class ExerciseRunner:
         sleep(1)
 
         self.create_mirrorings()
+        self.start_apps()
         self.do_net_cli()
 
         # stop right after the CLI is exited
         self.net.stop()
+
+    def start_apps(self):
+        h1 = self.net.get('h1')
+        h3 = self.net.get('h3')
+
+        #
+        # abre xterm no h1
+        #
+        h1.cmd('xterm -hold -e "bash" &')
+
+        #
+        # abre xterm no h3 executando collector
+        #
+        h3.cmd('xterm -hold -e "python3 collector.py" &')
 
     def create_mirrorings(self):
         sleep(2)
