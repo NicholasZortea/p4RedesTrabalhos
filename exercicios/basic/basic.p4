@@ -110,12 +110,24 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
+    
+    register<bit<32>>(10) window_bytes;
+    register<bit<32>>(1) window_index;
+    register<bit<32>>(1) window_sum;
+    register<bit<32>>(1) amount_of_packets_to_clone;
+    register<bit<32>>(1) clone_counter;
+
     register<bit<32>>(1) packet_counter_reg;
     register<bit<32>>(1) byte_counter_reg;
     
 
     bit<32> pkt_count;
+    bit<32> clone_pkt;
     bit<32> byte_count;
+
+    bit<32> threshold;
+    bit<32> idx;
+    bit<32> sum;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -156,10 +168,56 @@ table ipv4_lpm {
             byte_counter_reg.read(byte_count, 0);
             byte_count = byte_count + (bit<32>) hdr.ipv4.totalLen;
             byte_counter_reg.write(0, byte_count);
+            
             meta.pkt_count = pkt_count;
             meta.byte_count = byte_count;
+            
+            clone_counter.read(clone_pkt, 0);
+            clone_pkt = clone_pkt + 1;
+
+            amount_of_packets_to_clone.read(threshold, 0);
+            window_index.read(idx, 0);
+            window_sum.read(sum, 0);
+
+            bit<32> old_value;
+            window_bytes.read(old_value, idx);
+
+            sum = sum - old_value;
+            if(sum < 0) {
+                sum = 0;
+            }
+
+            bit<32> pkt_size;
+            pkt_size = (bit<32>) hdr.ipv4.totalLen;
+
+            sum = sum + pkt_size;
+
+            window_bytes.write(idx, pkt_size);
+
+            idx = (idx + 1);
+            if (idx >= 10) {
+                idx = 0;
+            }
+            window_index.write(0, idx);
+
+            window_sum.write(0, sum);
+
+            if(sum < 10000000) {
+                threshold = 10;
+            } else if (sum > 15000000) {
+                threshold = 5;
+            } else {
+                threshold = 3;
+            }
+            amount_of_packets_to_clone.write(0, threshold);
+
+            if(clone_pkt >= threshold) {
+                clone_to_port();
+                clone_pkt = 0;
+            }
+            clone_counter.write(0, clone_pkt);
+
             ipv4_lpm.apply();
-            clone_to_port();
         }
     }
 }
