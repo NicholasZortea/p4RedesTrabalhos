@@ -155,7 +155,7 @@ table ipv4_lpm {
         default_action = NoAction();
     }
 
-    action clone_to_port() {
+    action clone() {
         clone_preserving_field_list(CloneType.I2E, 100, 1);
     }
 
@@ -202,9 +202,9 @@ table ipv4_lpm {
 
             window_sum.write(0, sum);
 
-            if(sum < 10000000) {
+            if(sum < 1000) {
                 threshold = 10;
-            } else if (sum > 15000000) {
+            } else if (sum > 1000 && sum < 1500) {
                 threshold = 5;
             } else {
                 threshold = 3;
@@ -212,7 +212,7 @@ table ipv4_lpm {
             amount_of_packets_to_clone.write(0, threshold);
 
             if(clone_pkt >= threshold) {
-                clone_to_port();
+                clone();
                 clone_pkt = 0;
             }
             clone_counter.write(0, clone_pkt);
