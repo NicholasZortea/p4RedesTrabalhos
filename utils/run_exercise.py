@@ -214,7 +214,7 @@ class ExerciseRunner:
         # wait for that to finish. Not sure how to do this better
         sleep(1)
 
-        self.create_mirrorings()
+        self.execute_runtime_commands_in_switchs()
         self.start_apps()
         self.do_net_cli()
 
@@ -235,11 +235,12 @@ class ExerciseRunner:
         #
         h3.cmd('xterm -hold -e "python3 collector.py" &')
 
-    def create_mirrorings(self):
+    def execute_runtime_commands_in_switchs(self):
         sleep(2)
-        os.system('simple_switch_CLI --thrift-port 9090 < sw1-mirror.txt')
-        os.system('simple_switch_CLI --thrift-port 9091 < sw2-mirror.txt')
-        print("Mirrorings created.")
+        os.system('simple_switch_CLI --thrift-port 9090 < sw1-runtimeCommands.txt')
+        os.system('simple_switch_CLI --thrift-port 9091 < sw2-runtimeCommands.txt')
+        print("Runtime commands executed in switches.")
+        print("Mirrors created and switchs id`s are set.")
 
     def parse_links(self, unparsed_links):
         """ Given a list of links descriptions of the form [node1, node2, latency, bandwidth]
