@@ -1,4 +1,7 @@
 build/
+pcaps/
+logs/
 ptf.log
 ptf.pcap
 ss-log.txt
+telemetry.csv

@@ -1,11 +1,24 @@
 from scapy.all import *
 import struct
-import time
+import csv
 import os
+import time
+
+CSV_FILE = "telemetry.csv"
+
+if not os.path.exists(CSV_FILE):
+    with open(CSV_FILE, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "timestamp",
+            "packets",
+            "bytes",
+            "queue_time",
+            "jitter"
+        ])
 
 class Collector:
     def process(self, pkt):
-        # apenas IPv4
         if IP in pkt:
             raw_bytes = bytes(pkt)
             telemetry_offset = 14 + 20
@@ -14,20 +27,17 @@ class Collector:
                 "!IIII",
                 raw_bytes[telemetry_offset:telemetry_offset + 16]
             )
-            self.printValues(packet_counter, bytes_counter, queue_time, jitter)
 
-    def printValues(self, packet, byte, queue_time, jitter):
-        os.system('clear')
-        print("==== TELEMETRIA ====")
-        print("Pacotes:", packet)
-        print("Bytes:", byte)
-        print("Queue time:", queue_time)
-        print("Jitter:", jitter)
-        print()
-        
+            with open(CSV_FILE, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    time.time(),
+                    packet_counter,
+                    bytes_counter,
+                    queue_time,
+                    jitter
+                ])
+
 collector = Collector()
-def process(pkt):
-    collector.process(pkt)
 
-sniff(iface="eth0", prn=process)
-
+sniff(iface="eth0", prn=collector.process)
