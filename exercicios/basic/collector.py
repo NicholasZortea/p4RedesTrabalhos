@@ -14,7 +14,8 @@ if not os.path.exists(CSV_FILE):
             "packets",
             "bytes",
             "queue_time",
-            "jitter"
+            "jitter",
+            "switch_id"
         ])
 
 class Collector:
@@ -23,9 +24,9 @@ class Collector:
             raw_bytes = bytes(pkt)
             telemetry_offset = 14 + 20
 
-            packet_counter, bytes_counter, queue_time, jitter = struct.unpack(
-                "!IIII",
-                raw_bytes[telemetry_offset:telemetry_offset + 16]
+            packet_counter, bytes_counter, queue_time, jitter, switch_id = struct.unpack(
+                "!IIIII",
+                raw_bytes[telemetry_offset:telemetry_offset + 20]
             )
 
             with open(CSV_FILE, "a", newline="") as f:
@@ -35,7 +36,8 @@ class Collector:
                     packet_counter,
                     bytes_counter,
                     queue_time,
-                    jitter
+                    jitter,
+                    switch_id
                 ])
 
 collector = Collector()
