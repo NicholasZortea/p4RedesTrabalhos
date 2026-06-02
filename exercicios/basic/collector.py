@@ -39,4 +39,4 @@ class Collector:
 
 collector = Collector()
 
-sniff(iface="eth0", prn=collector.process)
+sniff(iface=["eth0", "h3-eth1"], prn=collector.process)
