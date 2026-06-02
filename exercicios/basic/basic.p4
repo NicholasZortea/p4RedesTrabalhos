@@ -51,6 +51,7 @@ header telemetry {
     bit<32> bytes_counter;
     bit<32> queue_time;
     bit<32> jitter;
+    bit<8> switch_id;
 }
 
 struct headers {
@@ -243,6 +244,7 @@ control MyEgress(inout headers hdr,
             hdr.telemetry.packet_counter = meta.pkt_count;
             hdr.telemetry.bytes_counter = meta.byte_count;
             hdr.telemetry.queue_time = standard_metadata.deq_timedelta;
+            hdr.telemetry.switch_id = 1;
             queue_time = standard_metadata.deq_timedelta;
             last_queue_time_reg.read(previous_queue_time, 0);
             if(queue_time < previous_queue_time) {
