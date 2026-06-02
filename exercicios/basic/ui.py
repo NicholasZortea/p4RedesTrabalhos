@@ -11,6 +11,7 @@ st.title("P4 Telemetry Dashboard")
 try:
     df = pd.read_csv("telemetry.csv")
 
+
     latest = df.iloc[-1]
 
     c1, c2, c3, c4 = st.columns(4)
@@ -21,16 +22,28 @@ try:
     c4.metric("Jitter", int(latest["jitter"]))
 
     st.subheader("Queue Time")
-    st.line_chart(df["queue_time"])
+    queue_df = df.pivot(
+        index="packets",
+        columns="switch_id",
+        values="queue_time"
+    )
+    st.line_chart(queue_df)
 
     st.subheader("Jitter")
-    st.line_chart(df["jitter"])
+    jitter_df = df.pivot(
+        index="packets",
+        columns="switch_id",
+        values="jitter"
+    )
+    st.line_chart(jitter_df)
 
     st.subheader("Bytes")
-    st.line_chart(df["bytes"])
-
-    st.subheader("Packets")
-    st.line_chart(df["packets"])
+    bytes_df = df.pivot(
+        index="packets",
+        columns="switch_id",
+        values="bytes"
+    )
+    st.line_chart(bytes_df)
 
 except Exception:
     st.warning("Waiting for telemetry data...")
