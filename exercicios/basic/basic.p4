@@ -233,7 +233,7 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
 
     register<bit<32>>(1) last_queue_time_reg;
-    register<bit<8>> switch_id_reg;
+    register<bit<8>>(1) switch_id_reg;
     bit<32> previous_queue_time;
     bit<32> queue_time;
     bit<32> jitter;
