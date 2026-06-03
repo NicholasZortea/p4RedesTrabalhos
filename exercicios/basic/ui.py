@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 from streamlit_autorefresh import st_autorefresh
 
 st_autorefresh(interval=1000, key="telemetry")
@@ -22,32 +23,35 @@ try:
     c4.metric("Jitter", int(latest["jitter"]))
 
 
-    st.subheader("Tempo de fila")
-    queue_df = df.pivot(
-        index="packets",
-        columns="switch_id",
-        values="queue_time"
-    )
-    queue_df.columns = [f"Switch {col}" for col in queue_df.columns]
-    st.line_chart(queue_df)
+    st.subheader("Jitter x Pacote")
 
-    st.subheader("Jitter")
-    jitter_df = df.pivot(
-        index="packets",
-        columns="switch_id",
-        values="jitter"
+    chart = alt.Chart(df).mark_line().encode(
+        x=alt.X("packets:Q", title="Pacotes"),
+        y=alt.Y("jitter:Q", title="Jitter"),
+        color=alt.Color("switch_id:N", title="Switch")
     )
-    jitter_df.columns = [f"Switch {col}" for col in jitter_df.columns]
-    st.line_chart(jitter_df)
 
-    st.subheader("Bytes")
-    bytes_df = df.pivot(
-        index="packets",
-        columns="switch_id",
-        values="bytes"
+    st.altair_chart(chart, use_container_width=True)
+
+    st.subheader("Tempo de fila x Pacote")
+
+    chart = alt.Chart(df).mark_line().encode(
+        x=alt.X("packets:Q", title="Pacotes"),
+        y=alt.Y("queue_time:Q", title="Tempo de fila"),
+        color=alt.Color("switch_id:N", title="Switch")
     )
-    bytes_df.columns = [f"Switch {col}" for col in bytes_df.columns]
-    st.line_chart(bytes_df)
+
+    st.altair_chart(chart, width="stretch")
+
+    st.subheader("Bytes x Pacote")
+
+    chart = alt.Chart(df).mark_line().encode(
+        x=alt.X("packets:Q", title="Pacotes"),
+        y=alt.Y("bytes:Q", title="Bytes"),
+        color=alt.Color("switch_id:N", title="Switch")
+    )
+
+    st.altair_chart(chart, width="stretch")
 
 except Exception:
     st.warning("Waiting for telemetry data...")
